@@ -46,4 +46,4 @@ streamlit run app.py
 Data is anonymised. No student names or room numbers are shown; location is at block or building level.
 
 ## Author
-YOUR NAME, ROLL NO, BRANCH
+Rohitash Kumar
