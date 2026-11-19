@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Campus Complaint Portal Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);--bg:#fff;--card:#f6f7f9;--tx:#1f2430;--mu:#6b7280;--bd:#e3e6eb}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#14161b;--card:#1d2027;--tx:#e8eaee;--mu:#9aa1ad;--bd:#2b2f38}}
+*{box-sizing:border-box}html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--tx);font:14px/1.4 system-ui,-apple-system,Segoe UI,sans-serif;padding:14px;max-width:1100px;margin:auto}
+h1{font-size:20px;margin:0}p.s{color:var(--mu);margin:2px 0 12px}
+.f{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.f label{font-size:12px;color:var(--mu);display:flex;flex-direction:column;gap:3px}
+select,input{background:var(--card);color:var(--tx);border:1px solid var(--bd);border-radius:6px;padding:6px}
+.k{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:12px}
+.kc{background:var(--card);border-radius:8px;padding:10px}.kc b{display:block;font-size:22px}.kc span{color:var(--mu);font-size:12px}
+.g{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px}
+.c{background:var(--card);border-radius:8px;padding:12px;min-width:0}
+.c h2{font-size:14px;margin:0 0 8px}.ch{position:relative;height:230px}
+.sc{overflow-x:auto}
+table{border-collapse:collapse;font-size:11px;width:100%}td,th{padding:4px 5px;text-align:center;white-space:nowrap}th{color:var(--mu);font-weight:500}
+.wc{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;justify-content:center;min-height:200px}
+.ins{background:var(--card);border-left:4px solid #3b82f6;border-radius:6px;padding:10px;margin:12px 0}
+.note{color:var(--mu);font-size:12px;margin-top:12px}
+.c{cursor:zoom-in;transition:box-shadow .15s}.c:hover{box-shadow:0 0 0 2px #3b82f6}
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;padding:16px;z-index:9}.ov.on{display:flex}
+.bx{background:var(--bg);border-radius:10px;padding:14px;width:min(1000px,100%);max-height:92vh;overflow:auto}
+.bx h3{margin:0 0 8px;display:flex;justify-content:space-between;align-items:center;font-size:16px}.bx button{background:var(--card);color:var(--tx);border:1px solid var(--bd);border-radius:6px;padding:4px 10px;cursor:pointer}
+.bh{position:relative;height:min(70vh,560px)}.zm{zoom:1.6}
+</style></head><body>
+<h1>Campus Complaint Portal Dashboard</h1>
+<p class="s">For the hostel warden and administration: what is broken, where, and how fast it is fixed. Click any chart to enlarge it.</p>
+<div class="f">
+<label>Section<select id="fs"><option>All</option><option>Hostel</option><option>Classroom &amp; Lab</option><option>Other</option></select></label>
+<label>Status<select id="fz"><option>All</option><option>Open</option><option>In progress</option><option>Resolved</option></select></label>
+<label>From month: <span id="fml"></span><input type="range" id="fm" min="0" max="11" value="0"></label>
+</div>
+<div class="k" id="kpi"></div>
+<div class="ins" id="ins"></div>
+<div class="g">
+<div class="c"><h2>Complaints per month</h2><div class="ch"><canvas id="c1"></canvas></div></div>
+<div class="c"><h2>Section share</h2><div class="ch"><canvas id="c2"></canvas></div></div>
+<div class="c"><h2>Complaints by category</h2><div class="ch"><canvas id="c3"></canvas></div></div>
+
+<div class="c"><h2>Location vs. category (count)</h2><div class="sc" id="h1"></div></div>
+
+<div class="c"><h2>Common issues</h2><div class="wc" id="wc"></div></div>
+<div class="c"><h2>Monthly volume vs. mean resolution time</h2><div class="ch"><canvas id="c5"></canvas></div></div>
+</div>
+<div class="ov" id="ov"><div class="bx"><h3><span id="bt"></span><button id="bx">✕ Close</button></h3><div id="bb"></div></div></div>
+<p class="note">Ethics note: data is anonymised and shown at block or building level only; no student names or room numbers. The dataset is synthetic (600 generated complaints) and mirrors the portal’s structure.</p>
+<script>
+const R=(s=>()=>{s|=0;s=s+0x6D2B79F5|0;let t=Math.imul(s^s>>>15,1|s);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296})(7);
+const COL={"Hostel":"#3b82f6","Classroom & Lab":"#10b981","Other":"#f59e0b"};
+const CATS=[["Hostel","Internet",22,1.5,["wifi slow","no internet","router down","LAN port"]],["Hostel","Electric",16,2,["power cut","switch broken","tube light","socket"]],["Hostel","Carpentry",8,4,["door lock","cupboard","bed broken","window"]],["Hostel","Plumbing",12,5,["tap leak","no water","drain block","flush"]],
+["Classroom & Lab","Projector",6,3,["projector","no display"]],["Classroom & Lab","AC",5,6,["AC not cooling"]],["Classroom & Lab","Fan",5,2,["fan noisy","fan not working"]],["Classroom & Lab","Lights",4,1.5,["lights off"]],["Classroom & Lab","Bench",4,4,["bench broken"]],["Classroom & Lab","Computer",5,3,["PC slow","keyboard"]],
+["Other","Mess",5,2,["food quality","hygiene"]],["Other","Library",2,3,["books","seating"]],["Other","Transport",2,4,["bus late"]],["Other","Cleanliness",4,1.5,["dustbin","washroom"]]];
+const LOCS={"Hostel":["Block A","Block B","Block C","Block C","Block D"],"Classroom & Lab":["Academic 1","Academic 2","Lab Complex"],"Other":["Campus"]};
+const MN=["Nov","Dec","Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct"],MW=[1.6,1.5,.8,.8,.9,1.3,1.5,.7,.6,.7,.9,1.4];
+const DN=["Mon","Tue","Wed","Thu","Fri","Sat","Sun"],BANDS=["00-04","04-08","08-12","12-16","16-20","20-24"];
+function pick(w){let t=w.reduce((a,b)=>a+b,0)*R(),i=0;while((t-=w[i])>0)i++;return i}
+const D=[];for(let i=0;i<600;i++){const c=CATS[pick(CATS.map(x=>x[2]))],m=pick(MW),h=c[0]=="Hostel"?[18,19,20,21,22,23,0,1][Math.floor(R()*8)]:9+Math.floor(R()*9),st=R();
+const status=m>=10&&st<.4?"Open":st<.15?"Open":st<.3?"In progress":"Resolved";
+D.push({sec:c[0],cat:c[1],loc:LOCS[c[0]][Math.floor(R()*LOCS[c[0]].length)],m,day:Math.floor(R()*7),band:Math.floor(h/4),status,days:status=="Resolved"?+(0.5+-Math.log(1-R())*c[3]*.8).toFixed(1):null,kw:c[4][Math.floor(R()*c[4].length)]})}
+const q=(a,p)=>{if(!a.length)return 0;a=[...a].sort((x,y)=>x-y);const i=(a.length-1)*p,l=Math.floor(i);return a[l]+(a[Math.min(l+1,a.length-1)]-a[l])*(i-l)};
+const mean=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:0;
+const ch={},cfgs={};function mk(id,cfg){ch[id]&&ch[id].destroy();cfg.options=Object.assign({responsive:true,maintainAspectRatio:false},cfg.options||{});cfgs[id]=structuredClone(cfg);ch[id]=new Chart(document.getElementById(id),cfg)}
+function heat(id,rows,cols,get){const mx=Math.max(1,...rows.flatMap(r=>cols.map(c=>get(r,c))));
+document.getElementById(id).innerHTML="<table><tr><th></th>"+cols.map(c=>"<th>"+c+"</th>").join("")+"</tr>"+rows.map(r=>"<tr><th>"+r+"</th>"+cols.map(c=>{const v=get(r,c);return`<td style="background:rgba(37,99,235,${(v/mx*.85).toFixed(2)});color:${v/mx>.5?"#fff":"inherit"}">${v||""}</td>`}).join("")+"</tr>").join("")+"</table>"}
+function render(){
+const s=fs.value,z=fz.value,f=+fm.value;fml.textContent=MN[f];
+const d=D.filter(x=>(s=="All"||x.sec==s)&&(z=="All"||x.status==z)&&x.m>=f);
+const rs=d.filter(x=>x.days!=null).map(x=>x.days);
+const col=getComputedStyle(document.body).color;Chart.defaults.color=col;Chart.defaults.borderColor="transparent";
+kpi.innerHTML=[["Total",d.length],["Open",d.filter(x=>x.status=="Open").length],["% resolved",d.length?Math.round(rs.length/d.length*100)+"%":"0%"]].map(k=>`<div class="kc"><b>${k[1]}</b><span>${k[0]}</span></div>`).join("");
+const cats=CATS.filter(c=>d.some(x=>x.cat==c[1])),cnt=c=>d.filter(x=>x.cat==c[1]).length;
+const slow=[...cats].sort((a,b)=>q(d.filter(x=>x.cat==b[1]&&x.days!=null).map(x=>x.days),.5)-q(d.filter(x=>x.cat==a[1]&&x.days!=null).map(x=>x.days),.5))[0];
+const top=[...cats].sort((a,b)=>cnt(b)-cnt(a))[0];
+ins.innerHTML=top?`<b>Insight:</b> <b>${top[1]}</b> is the most frequent issue (${cnt(top)} complaints) and <b>${slow[1]}</b> takes the longest to fix. Volume peaks around exam months (Nov, Dec, Apr, May).`:"No data for this filter.";
+const mc=MN.map((_,i)=>d.filter(x=>x.m==i).length);
+mk("c1",{type:"line",data:{labels:MN,datasets:[{data:mc,fill:true,borderColor:"#3b82f6",backgroundColor:"rgba(59,130,246,.2)",tension:.3,pointRadius:2}]},options:{plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,grid:{display:false}},x:{grid:{display:false}}}}});
+const secs=Object.keys(COL);
+mk("c2",{type:"doughnut",data:{labels:secs,datasets:[{data:secs.map(k=>d.filter(x=>x.sec==k).length),backgroundColor:secs.map(k=>COL[k]),borderWidth:0}]},options:{plugins:{legend:{position:"bottom"}}}});
+const sc=[...cats].sort((a,b)=>cnt(b)-cnt(a));
+mk("c3",{type:"bar",data:{labels:sc.map(c=>c[1]),datasets:[{data:sc.map(cnt),backgroundColor:sc.map(c=>COL[c[0]])}]},options:{indexAxis:"y",plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{grid:{display:false}}}}});
+const locs=[...new Set(d.map(x=>x.loc))].sort();
+heat("h1",locs,cats.map(c=>c[1]),(l,c)=>d.filter(x=>x.loc==l&&x.cat==c).length);
+const kc={};d.forEach(x=>kc[x.kw]=(kc[x.kw]||0)+1);const ke=Object.entries(kc).sort((a,b)=>b[1]-a[1]),km=ke.length?ke[0][1]:1;
+wc.innerHTML=ke.slice(0,22).map(([k,v])=>`<span style="font-size:${11+v/km*20}px;color:${COL[CATS.find(c=>c[4].includes(k))[0]]}">${k}</span>`).join("");
+const pts=MN.map((_,i)=>{const a=d.filter(x=>x.m==i&&x.days!=null).map(x=>x.days);return a.length?{x:mc[i],y:+mean(a).toFixed(2)}:null}).filter(Boolean);
+let ln=[];if(pts.length>2){const mx=mean(pts.map(p=>p.x)),my=mean(pts.map(p=>p.y)),b=pts.reduce((a,p)=>a+(p.x-mx)*(p.y-my),0)/(pts.reduce((a,p)=>a+(p.x-mx)**2,0)||1),a0=my-b*mx,xs=pts.map(p=>p.x);ln=[{x:Math.min(...xs),y:a0+b*Math.min(...xs)},{x:Math.max(...xs),y:a0+b*Math.max(...xs)}]}
+mk("c5",{type:"scatter",data:{datasets:[{data:pts,backgroundColor:"#3b82f6"},{type:"line",data:ln,borderColor:"#ef4444",borderDash:[5,4],pointRadius:0}]},options:{plugins:{legend:{display:false}},scales:{x:{title:{display:true,text:"Complaints in month"},grid:{display:false}},y:{title:{display:true,text:"Mean days to resolve"},grid:{display:false}}}}})}
+[fs,fz,fm].forEach(e=>e.addEventListener("input",render));render();
+let bigC=null;const ov=document.getElementById("ov"),bb=document.getElementById("bb");
+function closeBig(){ov.classList.remove("on");bigC&&bigC.destroy();bigC=null;bb.innerHTML=""}
+document.querySelectorAll(".c").forEach(card=>card.addEventListener("click",()=>{
+ document.getElementById("bt").textContent=card.querySelector("h2").textContent;
+ const cv=card.querySelector("canvas");
+ if(cv){bb.innerHTML='<div class="bh"><canvas id="bigc"></canvas></div>';bigC=new Chart(document.getElementById("bigc"),structuredClone(cfgs[cv.id]))}
+ else{bb.innerHTML='<div class="zm">'+card.querySelector(".sc,.wc").innerHTML+'</div>'}
+ ov.classList.add("on")}));
+document.getElementById("bx").onclick=closeBig;ov.addEventListener("click",e=>{if(e.target==ov)closeBig()});
+document.addEventListener("keydown",e=>{if(e.key=="Escape")closeBig()});
+</script></body></html>
